@@ -1,0 +1,28 @@
+#  Template NodeJS build
+
+#  This template allows you to validate your NodeJS code.
+#  The workflow allows running tests and code linting on the default branch.
+
+image: node:10.15.3
+
+pipelines:
+  default:
+    - step:
+        name: Build and Test
+        caches:
+          - node
+        script:
+          - unset CI
+          - npm install
+          - npm run build
+        artifacts:
+          - build/**
+    - step:
+        name: Deploy to Web
+        image: alpine
+        deployment: production
+        script:
+          - apk update && apk add openssh rsync
+          - ssh -o StrictHostKeyChecking=no $USERNAME@$HOST 'bash -s' < predeploy.sh $DOMAIN_NAME
+          - rsync -rSlh --stats build/ $USERNAME@$HOST:$DOMAIN_NAME/www
+          - ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "chmod -R u+rwX,go+rX,go-w $DOMAIN_NAME/www"
